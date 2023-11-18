@@ -33,7 +33,9 @@ class CartResource(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('quantity', type=float, required=True, help="Quantity cannot be blank!")
         args = parser.parse_args()
-
+        incart = Cart.query.filter_by(user_id = user_id, product_id = product_id).all()
+        if(len(incart)!=0):
+            return {'message': 'Product already added in the cart'}, 404
         product = Product.query.get(product_id)
         if(product==None):
             return {'message': f'Product_id {product_id} is not in the database'}, 404
@@ -88,6 +90,61 @@ class CartResource(Resource):
         return {'message': f'Product deleted from the cart for user_id {user_id}'}, 200
     
 
+class PlaceOrder(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('user')
+    def post(self, user_id):
+        cart_items = Cart.query.filter_by(user_id=user_id).all()
+        if not cart_items:
+            return {"message": "No items in the cart to order"}, 400
+        new_order = Order(
+            user_id=user_id,
+            description=request.json.get('description', None) 
+        )
+
+        db.session.add(new_order)
+        db.session.commit()
+        for item in cart_items:
+            new_order_item = OrderItem(
+                order_id=new_order.id,
+                product_id=item.product_id,
+                quantity=item.Quantity,
+                total_price=item.price_of_qty  # Assuming total_price is part of the JSON request
+            )
+            product_id = item.product_id
+            product =Product.query.filter_by(id = product_id).first()
+            product.available_quantity = product.available_quantity - item.Quantity
+            db.session.add(new_order_item)
+        db.session.commit()
+        Cart.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
+        return {"message": "Order placed successfully"}, 200
+    
+class CancelOrder(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('user')
+    def delete(self, user_id, order_id):
+        order = Order.query.filter_by(id=order_id, user_id=user_id).first()
+        if order is None:
+            return {"message": "Order not found"}, 404
+        current_time = datetime.utcnow()
+        if (current_time - order.placed_at).total_seconds() > 1800:  # 30 minutes in seconds
+            return {"message": "Order cannot be canceled, it's been more than 30 minutes since it was placed"}, 400
+        order_items = OrderItem.query.filter_by(order_id=order_id).all()
+        for order_item in order_items:
+            product_id = order_item.product_id
+            product = Product.query.filter_by(id=product_id).first()
+            if product:
+                product.available_quantity += order_item.quantity
+        db.session.commit()
+        for order_item in order_items:
+            db.session.delete(order_item)
+        db.session.delete(order)
+        db.session.commit()
+        return {"message": "Order canceled successfully"}, 200
+    
+api.add_resource(PlaceOrder,'/place-order/<int:user_id>')
+api.add_resource(CancelOrder,'/cancel-order/<int:user_id>/<int:order_id>')
 api.add_resource(CartListResource, '/cart/<int:user_id>')
 api.add_resource(CartResource, '/cart/<int:user_id>/<int:product_id>')
 
