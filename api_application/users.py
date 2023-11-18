@@ -20,7 +20,9 @@ class CartListResource(Resource):
                 'id': cart_item.id,
                 'user_id': cart_item.user_id,
                 'product_id': cart_item.product_id,
-                'quantity': cart_item.Quantity
+                'quantity': cart_item.Quantity,
+                'rate_per_unit':cart_item.rate_per_unit,
+                'total_price':cart_item.price_of_qty
             } for cart_item in cart_items], 200
 
 # Add,Delete and Update a product to the cart for the given user
@@ -28,7 +30,6 @@ class CartResource(Resource):
     @auth_required('token', 'session')
     @roles_accepted('user')
     def post(self, user_id,product_id):
-        
         parser = reqparse.RequestParser()
         parser.add_argument('quantity', type=float, required=True, help="Quantity cannot be blank!")
         args = parser.parse_args()
@@ -36,11 +37,14 @@ class CartResource(Resource):
         product = Product.query.get(product_id)
         if(product==None):
             return {'message': f'Product_id {product_id} is not in the database'}, 404
-
+        if product.available_quantity < args['quantity']:
+            return {'message': f'Product_id {product_id} is not available in the required quantity'}, 404
         new_cart_item = Cart(
             user_id=user_id,
             product_id=product_id,
-            Quantity=args['quantity']
+            Quantity=args['quantity'],
+            rate_per_unit = product.rate_per_unit,
+            price_of_qty = round(product.rate_per_unit*args['quantity'],2)
         )
         db.session.add(new_cart_item)
         db.session.commit()
@@ -58,8 +62,10 @@ class CartResource(Resource):
 
         if cart_item is None:
             return {'message': f'Product with ID {product_id} not found in the cart for user_id {user_id}'}, 404
-
+        product = Product.query.get(product_id)
         # Update the quantity
+        if product.available_quantity < args['quantity']:
+            return {'message': f'Product_id {product_id} is not available in the required quantity'}, 404
         cart_item.Quantity = args['quantity']
         db.session.commit()
 
@@ -84,6 +90,9 @@ class CartResource(Resource):
 
 api.add_resource(CartListResource, '/cart/<int:user_id>')
 api.add_resource(CartResource, '/cart/<int:user_id>/<int:product_id>')
+
+
+
 
 
 

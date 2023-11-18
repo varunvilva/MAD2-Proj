@@ -5,6 +5,7 @@ from api_application.models import *
 from datetime import datetime, timedelta
 from api_application.admin import *
 from api_application.users import *
+from .tasks import *
 
 # @app.route('/index')
 # def index():
@@ -56,6 +57,11 @@ def logout():
     # return redirect(url_for('index'))
     return redirect("/login")
 
+
+@app.route('/sayHello', methods=['GET', 'POST'])
+def sayHello_view():
+    res = sayHello.delay()
+    return jsonify({"task_id":res.id}),200
 
 # Code to get CSRF token:
 # var script = document.createElement('script');

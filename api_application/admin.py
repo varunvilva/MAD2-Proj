@@ -178,9 +178,97 @@ class ProductListResource(Resource):
         db.session.add(new_product)
         db.session.commit()
         return {'message': 'Product added to the category'}, 201
+    
+class OrderSummary(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('admin')
+    def get(self):
+        orders= Order.query.all()
+        l = []
+        for order in orders:
+            l.append({
+                "id":order.id,
+                "user_id":order.user_id,
+                "placed_at":order.placed_at,
+                "description":order.description
+            })
+        return l, 200
+
+class OrderItemsSummary(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('admin')
+    def get(self):
+        orders= OrderItem.query.all()
+        l = []
+        for order in orders:
+            l.append({
+                "id":order.id,
+                "order_id":order.order_id,
+                "product_id":order.product_id,
+                "quantity":order.quantity,
+                "total_price":order.total_price
+            })
+        return l, 200
 
 
+    
+class PlaceOrder(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('admin')
+    def post(self, user_id):
+        cart_items = Cart.query.filter_by(user_id=user_id).all()
+        if not cart_items:
+            return {"message": "No items in the cart to order"}, 400
+        new_order = Order(
+            user_id=user_id,
+            description=request.json.get('description', None) 
+        )
 
+        db.session.add(new_order)
+        db.session.commit()
+        for item in cart_items:
+            new_order_item = OrderItem(
+                order_id=new_order.id,
+                product_id=item.product_id,
+                quantity=item.Quantity,
+                total_price=item.price_of_qty  # Assuming total_price is part of the JSON request
+            )
+            product_id = item.product_id
+            product =Product.query.filter_by(id = product_id).first()
+            product.available_quantity = product.available_quantity - item.Quantity
+            db.session.add(new_order_item)
+        db.session.commit()
+        Cart.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
+        return {"message": "Order placed successfully"}, 200
+    
+class CancelOrder(Resource):
+    @auth_required('token', 'session')
+    @roles_accepted('admin')
+    def delete(self, user_id, order_id):
+        order = Order.query.filter_by(id=order_id, user_id=user_id).first()
+        if order is None:
+            return {"message": "Order not found"}, 404
+        current_time = datetime.utcnow()
+        if (current_time - order.placed_at).total_seconds() > 1800:  # 30 minutes in seconds
+            return {"message": "Order cannot be canceled, it's been more than 30 minutes since it was placed"}, 400
+        order_items = OrderItem.query.filter_by(order_id=order_id).all()
+        for order_item in order_items:
+            product_id = order_item.product_id
+            product = Product.query.filter_by(id=product_id).first()
+            if product:
+                product.available_quantity += order_item.quantity
+        db.session.commit()
+        for order_item in order_items:
+            db.session.delete(order_item)
+        db.session.delete(order)
+        db.session.commit()
+        return {"message": "Order canceled successfully"}, 200
+
+api.add_resource(OrderSummary,'/get-orders') 
+api.add_resource(OrderItemsSummary,'/get-order-items') 
+api.add_resource(PlaceOrder,'/place-order/<int:user_id>')
+api.add_resource(CancelOrder,'/cancel-order/<int:user_id>/<int:order_id>')
 api.add_resource(CategoryResource, '/categories/<int:category_id>')
 api.add_resource(CategoryListResource, '/categories')
 api.add_resource(ProductResource, '/products/<int:product_id>')

@@ -1,6 +1,8 @@
 from api_application import *
+
 from datetime import datetime
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import func
 base=declarative_base()
 class RolesUsers(db.Model,base):
     __tablename__ = 'roles_users'
@@ -31,7 +33,6 @@ class User(db.Model, UserMixin):
     roles = db.relationship('Role', secondary='roles_users',
                          backref=db.backref('users', lazy='dynamic'))
 
-
 class Category(db.Model):
     __tablename__ = 'category'
     id = db.Column(db.Integer, primary_key=True)
@@ -52,9 +53,25 @@ class Product(db.Model):
     units = db.Column(db.String(50), nullable=False)
     date_added = db.Column(db.DateTime, default=datetime.utcnow().date())
 
-
 class Cart(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer,nullable=False)
     product_id = db.Column(db.Integer,nullable=False)
-    Quantity = db.Column(db.Float,nullable=True)
+    Quantity = db.Column(db.Float,nullable=False)
+    rate_per_unit = db.Column(db.Float,nullable=False)
+    price_of_qty = db.Column(db.Float, nullable=False)
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    total_price = db.Column(db.Float,nullable=False)
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    placed_at = db.Column(db.DateTime, default=datetime.utcnow())
+    description = db.Column(db.String(100))
+    items = db.relationship('OrderItem', backref='order', lazy='dynamic')
+    
