@@ -22,6 +22,7 @@ product_fields = {
     'date_added': fields.DateTime(dt_format='iso8601')
 }
 
+
 class CategoryResource(Resource):
     @auth_required('token','session')
     @roles_accepted('admin')
@@ -176,6 +177,7 @@ class ProductListResource(Resource):
             units=args['units']
         )
         db.session.add(new_product)
+        Category.query.get(c_id).no_of_products += 1
         db.session.commit()
         return {'message': 'Product added to the category'}, 201
     

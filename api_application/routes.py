@@ -10,6 +10,7 @@ from flask import send_file,make_response
 from flask_excel import make_response_from_array
 import pandas as pd
 from celery.result import AsyncResult
+from run import user_datastore
 
 
 @app.route('/')
@@ -31,21 +32,38 @@ def profile():
     else:
         return 'You are not logged in.'
 
-@app.route('/admin-login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        data = request.get_json()
-        email = data.get("email")
-        password = data.get("password")
+# @app.route('/admin-login', methods=['GET', 'POST'])
+# def login():
+#     if request.method == 'POST':
+#         data = request.get_json()
+#         email = data.get("email")
+#         password = data.get("password")
         
-        user = app.Security.datastore.find_user(email=email)
-        if user and verify_password(password, user.password):
-            login_user(user)
-            session_token = current_user.get_auth_token()
-            return {"session-token":session_token},200
-        else:
-            return redirect('/admin-login')
-    return render_template("login.html")
+#         user = app.Security.datastore.find_user(email=email)
+#         if user and verify_password(password, user.password):
+#             login_user(user)
+#             session_token = current_user.get_auth_token()
+#             return {"session-token":session_token},200
+#         else:
+#             return redirect('/admin-login')
+#     return render_template("login.html")
+
+@app.post('/user-login')
+def user_login():
+    data = request.get_json()
+    email = data.get('email')
+    if not email:
+        return jsonify({"message": "email not provided"}), 400
+
+    user = user_datastore.find_user(email=email)
+
+    if not user:
+        return jsonify({"message": "User Not Found"}), 404
+
+    if verify_password(data.get("password"), user.password):
+        return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name})
+    else:
+        return jsonify({"message": "Wrong Password"}), 400
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
