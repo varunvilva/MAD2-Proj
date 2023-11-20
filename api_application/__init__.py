@@ -16,6 +16,7 @@ app.config['SECURITY_TOKEN_AUTHENTICATION_HEADER']='Authentication-Token'
 app.config['WTF_CSRF_ENABLED'] = False
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECURITY_PASSWORD_SALT'] = 'f724f39fcae64ca2ba988bf09ee91c66'
+app.config['SECURITY_REGISTERABLE'] = True
 
 
 db=SQLAlchemy(app)

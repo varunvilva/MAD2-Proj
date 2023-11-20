@@ -25,7 +25,7 @@ product_fields = {
 
 class CategoryResource(Resource):
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     def get(self, category_id):
         category = Category.query.get(category_id)
         if category == None:
@@ -68,7 +68,7 @@ class CategoryResource(Resource):
 
 class ProductResource(Resource):
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     def get(self, product_id):
         product = Product.query.get(product_id)
         if(product==None):
@@ -100,6 +100,7 @@ class ProductResource(Resource):
     @roles_accepted('admin')
     def put(self, product_id):
         product = Product.query.get(product_id)
+        prev_cat_id = product.category_id
         if(product==None):
             return {'message': f'Product_id {product_id} is not in the database'}, 404
         parser = reqparse.RequestParser()
@@ -111,7 +112,9 @@ class ProductResource(Resource):
         parser.add_argument('available_quantity', type=int, help="quantity cannot be blank!")
         parser.add_argument('units', type=str)
         args = parser.parse_args()
-        
+        if(args['category_id']!=product.category_id):
+            Category.query.get(prev_cat_id).no_of_products -= 1
+            Category.query.get(args['category_id']).no_of_products += 1
         product.category_id = args['category_id']
         product.name = args['name']
         product.manufacturer = args['manufacturer']
@@ -127,7 +130,7 @@ class ProductResource(Resource):
 class CategoryListResource(Resource):
     #list out all the  categories
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     @marshal_with(category_fields)
     def get(self):
         return Category.query.all()
@@ -140,13 +143,17 @@ class CategoryListResource(Resource):
         parser.add_argument('name', type=str, required=True, help="Name cannot be blank!")
         args = parser.parse_args()
         new_category = Category(name=args['name'])
-        db.session.add(new_category)
-        db.session.commit()
+        try:
+            db.session.add(new_category)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return {'message': 'Category already exists'}, 500
         return {'message': 'Category created successfully'}, 201
 
 class ProductListResource(Resource):
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     @marshal_with(product_fields)
     def get(self):
         return Product.query.all()
@@ -183,7 +190,7 @@ class ProductListResource(Resource):
     
 class OrderSummary(Resource):
     @auth_required('token', 'session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     def get(self):
         orders= Order.query.all()
         l = []
@@ -198,7 +205,7 @@ class OrderSummary(Resource):
 
 class OrderItemsSummary(Resource):
     @auth_required('token', 'session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','user','manager')
     def get(self):
         orders= OrderItem.query.all()
         l = []

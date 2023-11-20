@@ -1,12 +1,12 @@
 from api_application import api
-from flask_restful import Resource, reqparse,output_json
+from flask_restful import Resource, reqparse, output_json
 from api_application import db
 from api_application.models import *
 from datetime import datetime, timedelta
 from api_application.admin import *
 from api_application.users import *
 from .tasks import *
-from flask import send_file,make_response
+from flask import send_file, make_response
 from flask_excel import make_response_from_array
 import pandas as pd
 from celery.result import AsyncResult
@@ -17,36 +17,23 @@ from run import user_datastore
 def landingPageUser():
     return "Hello World"
 
+
 @app.route('/protected')
-@roles_accepted('admin','user')
+@roles_accepted('admin', 'user')
 def landingPageAdmin():
     return render_template("user/landingPageuser.html")
 
+
 @app.route('/profile')
-@auth_required('token','session')
+@auth_required('token', 'session')
 def profile():
-    
+
     if current_user.is_authenticated:
         session_token = current_user.get_auth_token()
         return f'Welcome, {current_user.username}! Your session token is: {session_token}'
     else:
         return 'You are not logged in.'
 
-# @app.route('/admin-login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         data = request.get_json()
-#         email = data.get("email")
-#         password = data.get("password")
-        
-#         user = app.Security.datastore.find_user(email=email)
-#         if user and verify_password(password, user.password):
-#             login_user(user)
-#             session_token = current_user.get_auth_token()
-#             return {"session-token":session_token},200
-#         else:
-#             return redirect('/admin-login')
-#     return render_template("login.html")
 
 @app.post('/user-login')
 def user_login():
@@ -59,56 +46,81 @@ def user_login():
 
     if not user:
         return jsonify({"message": "User Not Found"}), 404
+    
+    if not user.active:
+        return jsonify({"message": "User is not active"}), 400
 
     if verify_password(data.get("password"), user.password):
+        login_user(user)
         return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name})
+    
     else:
         return jsonify({"message": "Wrong Password"}), 400
 
-@app.route('/register', methods=['GET', 'POST'])
+
+@app.route('/user-register', methods=['POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-
-        y = app.Security.datastore.find_or_create_role(name='user', description='User')
-        if not app.Security.datastore.find_user(username=username):
-            app.Security.datastore.create_user(username=username,email=email, password=hash_password(password), roles=[y])
-
+        data = request.get_json()
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        role = data.get('role')
+        try:
+            print(user_datastore.find_user(email=email))
+            if not user_datastore.find_user(email=email) and role == "user":
+                print("User being added")
+                user_datastore.create_user(username=username, email=email, password=hash_password(password), roles=[role])
+            elif not user_datastore.find_user(email=email) and role == "manager":
+                print("Manager being added")
+                user_datastore.create_user(username=username, email=email, password=hash_password(password), roles=[role],active=False)
+            else:
+                print("User already exists or invalid role.")
+            db.session.commit()
+            return jsonify({"message": "User added successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return f"An error occurred: {str(e)}"
+    
+@app.route('/user-activate/<int:user_id>', methods=['GET'])
+@auth_required('token', 'session')
+@roles_required('admin')
+def manager_allowed(user_id):
+    user = User.query.get(user_id)
+    if user.roles[0].name == "user":
+        return jsonify({"message": "User is a user and is already activated"}), 400
+    if user:
+        user.active = True
         db.session.commit()
-        return redirect('/login')
-    return render_template("register.html")
+        return jsonify({"message": "User activated successfully"}), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
+        
 
-
-@app.route('/logout')
-@auth_required()
+@app.route('/logout', methods=['GET', 'POST'])
+@auth_required('token', 'session')
 def logout():
-    current_user.active=1
-    current_user.login_count = 0
+    current_user.last_loggout_time = datetime.utcnow()
     db.session.commit()
     logout_user()
-    return redirect("/login")
+    return redirect("/")
+
 
 @app.route('/download-data/<int:user_id>', methods=['GET', 'POST'])
 @auth_required('token', 'session')
-@roles_accepted('user')
+@roles_accepted('user','manager')
 def download_csv(user_id):
     task = create_csv.delay(user_id)
-    return jsonify({"task_id":task.id}),200
+    return jsonify({"task_id": task.id}), 200
+
 
 @app.get('/get-csv/<task_id>')
 @auth_required('token', 'session')
-@roles_accepted('user')
+@roles_accepted('user','manager')
 def get_csv(task_id):
     res = AsyncResult(task_id)
     if res.ready():
         filename = res.result
-        return send_file(filename,as_attachment=True)
+        return send_file(filename, as_attachment=True)
     else:
-        return {"message":"Task is not ready"},404
-
-
-
-
-
+        return {"message": "Task is not ready"}, 404
