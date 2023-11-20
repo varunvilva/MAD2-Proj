@@ -6,13 +6,11 @@ from datetime import datetime, timedelta
 from api_application.admin import *
 from api_application.users import *
 from .tasks import *
-from flask import send_file
+from flask import send_file,make_response
 from flask_excel import make_response_from_array
 import pandas as pd
+from celery.result import AsyncResult
 
-# @app.route('/index')
-# def index():
-#     return render_template("index.html")
 
 @app.route('/')
 def landingPageUser():
@@ -33,6 +31,21 @@ def profile():
     else:
         return 'You are not logged in.'
 
+@app.route('/admin-login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+        
+        user = app.Security.datastore.find_user(email=email)
+        if user and verify_password(password, user.password):
+            login_user(user)
+            session_token = current_user.get_auth_token()
+            return {"session-token":session_token},200
+        else:
+            return redirect('/admin-login')
+    return render_template("login.html")
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -57,86 +70,27 @@ def logout():
     current_user.login_count = 0
     db.session.commit()
     logout_user()
-    # return redirect(url_for('index'))
     return redirect("/login")
-
-
-@app.route('/sayHello', methods=['GET', 'POST'])
-def sayHello_view():
-    res = sayHello.delay()
-    return jsonify({"task_id":res.id}),200
-
 
 @app.route('/download-data/<int:user_id>', methods=['GET', 'POST'])
 @auth_required('token', 'session')
 @roles_accepted('user')
 def download_csv(user_id):
-    orders = Order.query.filter_by(user_id=user_id).all()
-    if not orders:
-        return jsonify({"message": "No orders found for the user"}), 404
-    user_data = []
-    for order in orders:
-        order_info = {
-            "order_id": order.id,
-            "placed_at": order.placed_at,
-            "description": order.description,
-            "items": []
-        }
+    task = create_csv.delay(user_id)
+    return jsonify({"task_id":task.id}),200
 
-        for item in order.items:
-            product_id = item.product_id
-            item_info = {
-                "product_id": item.product_id,
-                "name": Product.query.filter_by(id=product_id).first().name,
-                "manufacturer": Product.query.filter_by(id=product_id).first().manufacturer,
-                "expiry": Product.query.filter_by(id=product_id).first().expiry,
-                "rate_per_unit": Product.query.filter_by(id=product_id).first().rate_per_unit,
-                "quantity_ordered": item.quantity,
-                "total_price": item.total_price
-            }
-            order_info["items"].append(item_info)
-
-        user_data.append(order_info)
-    columns = ["order_id", "placed_at", "description", "product_id", "name", "manufacturer", "expiry", "rate_per_unit", "quantity_ordered", "total_price"]
-    data = []
-    data.append(columns)
-    for record in user_data:
-        for item in record["items"]:
-            data.append([record["order_id"], str(record["placed_at"]), record["description"], item["product_id"], item["name"], item["manufacturer"], str(item["expiry"]), item["rate_per_unit"], item["quantity_ordered"], item["total_price"]])
-
-    return make_response_from_array(data, "csv",file_name="export_data"),200
+@app.get('/get-csv/<task_id>')
+@auth_required('token', 'session')
+@roles_accepted('user')
+def get_csv(task_id):
+    res = AsyncResult(task_id)
+    if res.ready():
+        filename = res.result
+        return send_file(filename,as_attachment=True)
+    else:
+        return {"message":"Task is not ready"},404
 
 
-    # csv_content = []
-    # for record in user_data:
-    #     for key, value in record.items():
-    #         if key != "items":
-    #             csv_content.append(f"{key},{value}")
-    #     for item in record["items"]:
-    #         csv_content.append(",".join(str(value) for value in item.values()))
 
-    # # Send CSV content as a file
-    # csv_file = '\n'.join(csv_content)
-    # response = send_file(
-    #     csv_file,
-    #     as_attachment=True,
-    #     download_name=f'user_{user_id}_orders.csv',
-    #     mimetype='text/csv'
-    # )
 
-    # return response
-
-# Code to get CSRF token:
-# var script = document.createElement('script');
-# script.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
-# document.head.appendChild(script);
-
-# script.onload = function() {
-#   axios.get('/login', { data: null, headers: { 'Content-Type': 'application/json' } })
-#     .then(function (resp) {
-#       var csrf_token = resp.data['response']['csrf_token'];
-#       console.log('CSRF Token:', csrf_token);
-#       // Use the CSRF token as needed
-#     });
-# };
 

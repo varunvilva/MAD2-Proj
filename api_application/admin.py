@@ -217,7 +217,3 @@ api.add_resource(CategoryListResource, '/categories')
 api.add_resource(ProductResource, '/products/<int:product_id>')
 api.add_resource(ProductListResource, '/products')
 
-# class Admin(Resource):
-#     def get(self):
-#         return "Hello World"
-#     def post(self):
