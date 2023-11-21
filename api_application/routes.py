@@ -10,7 +10,7 @@ from flask import send_file, make_response
 from flask_excel import make_response_from_array
 import pandas as pd
 from celery.result import AsyncResult
-from run import user_datastore
+from .auth import user_datastore
 
 
 @app.route('/')
