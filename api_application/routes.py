@@ -49,13 +49,15 @@ def user_login():
     
     if not user.active:
         return jsonify({"message": "User is not active"}), 400
-
+    
     if verify_password(data.get("password"), user.password):
         login_user(user)
+        user.last_login_time = datetime.utcnow()
+        db.session.commit()
+        print("Hi")
         return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name})
-    
     else:
-        return jsonify({"message": "Wrong Password"}), 400
+        return jsonify({"message": "FAILURE"}), 400
 
 
 @app.route('/user-register', methods=['POST'])
@@ -77,7 +79,7 @@ def register():
             else:
                 print("User already exists or invalid role.")
             db.session.commit()
-            return jsonify({"message": "User added successfully"}), 200
+            return jsonify({"message": "SUCCESS"}), 200
         except Exception as e:
             db.session.rollback()
             return f"An error occurred: {str(e)}"
@@ -92,9 +94,9 @@ def manager_allowed(user_id):
     if user:
         user.active = True
         db.session.commit()
-        return jsonify({"message": "User activated successfully"}), 200
+        return jsonify({"message": "SUCCESS"}), 200
     else:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"message": "FAILURE"}), 404
         
 
 @app.route('/logout', methods=['GET', 'POST'])
@@ -121,6 +123,7 @@ def get_csv(task_id):
     res = AsyncResult(task_id)
     if res.ready():
         filename = res.result
+        filename = filename.replace('/mnt/c', '')
         return send_file(filename, as_attachment=True)
     else:
-        return {"message": "Task is not ready"}, 404
+        return {"message": "FAILURE"}, 404

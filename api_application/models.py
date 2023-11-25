@@ -20,13 +20,12 @@ class User(db.Model, UserMixin):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
-    username = db.Column(db.String(255), unique=True, nullable=True)
+    username = db.Column(db.String(255), nullable=True)
     password = db.Column(db.String(255), nullable=False)
     last_loggout_time = db.Column(db.DateTime)
-    login_count = db.Column(db.Integer,default=0)
+    last_login_time = db.Column(db.DateTime)
     active = db.Column(db.Boolean,default=0)
     fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False)
-    confirmed_at = db.Column(db.DateTime)
     roles = db.relationship('Role', secondary='roles_users',
                          backref=db.backref('users', lazy='dynamic'))
 

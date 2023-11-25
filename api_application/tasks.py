@@ -4,16 +4,16 @@ from .models import *
 from flask import jsonify
 from flask_excel import make_response_from_array
 from flask import send_file
-import pandas as pd
 import csv
-from io import StringIO
 from api_application import mail
+import os
 
 @shared_task(ignore_result=False)
 def create_csv(user_id):
     orders = Order.query.filter_by(user_id=user_id).all()
+    print(orders)
     if not orders:
-        return jsonify({"message": "No orders found for the user"}), 404
+        return {"message": "No orders found for the user"}, 404
     user_data = []
     for order in orders:
         order_info = {
@@ -38,8 +38,11 @@ def create_csv(user_id):
 
         user_data.append(order_info)
 
-    csv_file_path = "C:\\Programming\\MAD2_API\\test.csv"
-    with open(csv_file_path, 'w', newline='') as csv_file:
+    # csv_file_path = "C:\\Programming\\MAD2_API\\test.csv"
+    filename = "test.csv"
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    full_path = os.path.join(base_dir, filename)
+    with open(full_path, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         
         csv_writer.writerow(["order_id", "placed_at", "description", "product_id", "name", "manufacturer", "expiry", "rate_per_unit", "quantity_ordered", "total_price"])
@@ -48,27 +51,27 @@ def create_csv(user_id):
             for item in record["items"]:
                 csv_writer.writerow([record["order_id"], str(record["placed_at"]), record["description"], item["product_id"], item["name"], item["manufacturer"], str(item["expiry"]), item["rate_per_unit"], item["quantity_ordered"], item["total_price"]])
 
-    return csv_file_path
+    return full_path
     
 @shared_task(ignore_result=False)
 def remainder(email):
+    print("Hi")
     return send_email(email)
 
 def send_email(email):
-    msg_title = 'Title'
     sender = 'noreply@app.com'
-    msg = Message(msg_title, sender = sender, recipients = [email])
-    msg_body='This is a test email'
+    subject = "🌟 Don't Miss Out on the Fun! Your App Awaits Your Glorious Presence! 🚀"
+    msg = Message(subject = subject, sender = sender, recipients = [email])
     msg.body="" 
+    username = User.query.filter_by(email=email).first().username
     data = {
-        'app_name':"MAD2 - Grocerify",
-        "title":"grocerify",
-        "body":"This is a test email"
+        'app_name':"Grocerify",
+        "title":f"Hey {username},",
     }
     msg.html = render_template('email.html',data=data)
     try:
         mail.send(msg)
-        return "Email sent ..."
+        return {"message":"Email sent successfully"}, 200
     except Exception as e:
         return(str(e))
 

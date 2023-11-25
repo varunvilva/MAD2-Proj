@@ -1,0 +1,2 @@
+order_id,placed_at,description,product_id,name,manufacturer,expiry,rate_per_unit,quantity_ordered,total_price
+1,2023-11-23 18:02:46.391312,,1,milk,Amul,2023-11-30 00:00:00,20.99,2.0,41.98

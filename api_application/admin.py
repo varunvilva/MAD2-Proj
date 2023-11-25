@@ -48,7 +48,7 @@ class CategoryResource(Resource):
             db.session.delete(product)
         db.session.delete(category)
         db.session.commit()
-        return {'message': 'Category deleted'},200  
+        return {'message': 'SUCCESS'},200  
     
     @auth_required('token', 'session')
     @roles_accepted('admin')
@@ -61,7 +61,7 @@ class CategoryResource(Resource):
             return {'message': f'Category_id {category_id} is not in the database'}, 404
         category.name = args['name']
         db.session.commit()
-        return {'message': 'Category updated'},200
+        return {'message': 'SUCCESS'},200
     
 
 
@@ -92,9 +92,10 @@ class ProductResource(Resource):
         product = Product.query.get(product_id)
         if(product==None):
             return {'message': f'Product_id {product_id} is not in the database'}, 404
+        product.category.no_of_products -= 1
         db.session.delete(product)
         db.session.commit()
-        return {'message': 'Product deleted'},200
+        return {'message': 'SUCCESS'},200
     
     @auth_required('token','session')
     @roles_accepted('admin')
@@ -123,7 +124,7 @@ class ProductResource(Resource):
         product.available_quantity = args['available_quantity']
         product.units = args['units']
         db.session.commit()
-        return {'message': 'Product updated'},200
+        return {'message': 'SUCCESS'},200
     
     
 
@@ -149,7 +150,7 @@ class CategoryListResource(Resource):
         except:
             db.session.rollback()
             return {'message': 'Category already exists'}, 500
-        return {'message': 'Category created successfully'}, 201
+        return {'message': 'SUCCESS'}, 201
 
 class ProductListResource(Resource):
     @auth_required('token','session')
@@ -186,7 +187,7 @@ class ProductListResource(Resource):
         db.session.add(new_product)
         Category.query.get(c_id).no_of_products += 1
         db.session.commit()
-        return {'message': 'Product added to the category'}, 201
+        return {'message': 'SUCCESS'}, 201
     
 class OrderSummary(Resource):
     @auth_required('token', 'session')
