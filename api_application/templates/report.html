@@ -1,0 +1,22 @@
+<!-- app/templates/report.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Activity Report</title>
+</head>
+<body>
+    <h1>User Activity Report for {{ user.username }}</h1>
+
+    <h2>User Activity:</h2>
+    <img src="data:image/png;base64,{{ activity_chart }}" alt="User Activity Chart">
+
+    <h2>Product Preferences:</h2>
+    <img src="data:image/png;base64,{{ preferences_chart }}" alt="Product Preferences Chart">
+
+    <h2>Average Order Value:</h2>
+    <img src="data:image/png;base64,{{ avg_order_chart }}" alt="Average Order Value Chart">
+</body>
+</html>

@@ -50,12 +50,11 @@ def user_login():
     if not user.active:
         return jsonify({"message": "User is not active"}), 400
     
-    if verify_password(data.get("password"), user.password):
+    if verify_password(data.get("password"), user.password): 
         login_user(user)
         user.last_login_time = datetime.utcnow()
         db.session.commit()
-        print("Hi")
-        return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name})
+        return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name, "message":"success"})
     else:
         return jsonify({"message": "FAILURE"}), 400
 
@@ -79,7 +78,7 @@ def register():
             else:
                 print("User already exists or invalid role.")
             db.session.commit()
-            return jsonify({"message": "SUCCESS"}), 200
+            return jsonify({"message": "success"}), 200
         except Exception as e:
             db.session.rollback()
             return f"An error occurred: {str(e)}"
@@ -94,7 +93,7 @@ def manager_allowed(user_id):
     if user:
         user.active = True
         db.session.commit()
-        return jsonify({"message": "SUCCESS"}), 200
+        return jsonify({"message": "success"}), 200
     else:
         return jsonify({"message": "FAILURE"}), 404
         
@@ -127,3 +126,19 @@ def get_csv(task_id):
         return send_file(filename, as_attachment=True)
     else:
         return {"message": "FAILURE"}, 404
+
+@app.route('/get-all-managers',methods=['GET'])
+@auth_required('token', 'session')
+@roles_accepted('admin')
+def get_all_managers():
+    managers = User.query.filter_by(active=False).all()
+    print(managers)
+    l=[]
+    for manager in managers:
+        l.append({
+            "id":manager.id,
+            "username":manager.username,
+            "email":manager.email,
+            "active":manager.active
+        })
+    return l, 200

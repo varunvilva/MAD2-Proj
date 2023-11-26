@@ -1,12 +1,13 @@
-from celery import shared_task, Celery
+from celery import shared_task
 from celery.schedules import crontab
 from .models import * 
 from flask import jsonify
 from flask_excel import make_response_from_array
 from flask import send_file
 import csv
-from api_application import mail
+from weasyprint import HTML
 import os
+from api_application.helperFunction import *
 
 @shared_task(ignore_result=False)
 def create_csv(user_id):
@@ -58,22 +59,15 @@ def remainder(email):
     print("Hi")
     return send_email(email)
 
-def send_email(email):
-    sender = 'noreply@app.com'
-    subject = "🌟 Don't Miss Out on the Fun! Your App Awaits Your Glorious Presence! 🚀"
-    msg = Message(subject = subject, sender = sender, recipients = [email])
-    msg.body="" 
-    username = User.query.filter_by(email=email).first().username
-    data = {
-        'app_name':"Grocerify",
-        "title":f"Hey {username},",
-    }
-    msg.html = render_template('email.html',data=data)
-    try:
-        mail.send(msg)
-        return {"message":"Email sent successfully"}, 200
-    except Exception as e:
-        return(str(e))
+
+@shared_task(ignore_result=False)
+def generate_report(user_id):
+    email = User.query.get(user_id).email
+    # report_html_content = send_report_in_mail(email)
+    # pdf_bytes = generate_pdf(report_html_content)
+    send_report_in_mail.delay(email)
+
+
 
 
 

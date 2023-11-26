@@ -72,7 +72,7 @@ class CartResource(Resource):
         cart_item.price_of_qty = round(product.rate_per_unit*args['quantity'],2)
         db.session.commit()
 
-        return {'message': 'SUCCESS'}, 200
+        return {'message': 'success'}, 200
 
     @auth_required('token', 'session')
     @roles_accepted('user')
@@ -88,7 +88,7 @@ class CartResource(Resource):
         db.session.delete(cart_item)
         db.session.commit()
 
-        return {'message': 'SUCCESS'}, 200
+        return {'message': 'success'}, 200
     
 
 class PlaceOrder(Resource):
@@ -119,7 +119,7 @@ class PlaceOrder(Resource):
         db.session.commit()
         Cart.query.filter_by(user_id=user_id).delete()
         db.session.commit()
-        return {"message": "SUCCESS"}, 200
+        return {"message": "success"}, 200
     
 class CancelOrder(Resource):
     @auth_required('token', 'session')
@@ -142,7 +142,7 @@ class CancelOrder(Resource):
             db.session.delete(order_item)
         db.session.delete(order)
         db.session.commit()
-        return {"message": "SUCCESS"}, 200
+        return {"message": "success"}, 200
     
 api.add_resource(PlaceOrder,'/place-order/<int:user_id>')
 api.add_resource(CancelOrder,'/cancel-order/<int:user_id>/<int:order_id>')

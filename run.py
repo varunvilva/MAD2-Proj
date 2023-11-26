@@ -3,7 +3,7 @@ from api_application.worker import celery_init_app
 # from api_application.emails import send_email
 import flask_excel as excel
 from celery.schedules import crontab
-from api_application.tasks import remainder
+from api_application.tasks import *
 from api_application.auth import user_datastore 
 from flask_mail import Mail
 from datetime import datetime as dt
@@ -15,7 +15,6 @@ celery_app = celery_init_app(app)
 def sendEmail(sender, **kwargs):
     app.app_context().push()
     for user in User.query.all():
-        print(user)
         role = Role.query.filter_by(id = RolesUsers.query.filter_by(id=user.id).first().role_id).first().name
         if role == "user" and user.active == True:
             if(user.last_login_time == None or dt.utcnow()-user.last_login_time>timedelta(days=1)):
@@ -26,6 +25,21 @@ def sendEmail(sender, **kwargs):
                     remainder.s(email),
                 )
 
+@celery_app.on_after_configure.connect
+def generate_monthly_report(sender, **kwargs):
+    # Configure the periodic task to run generate_monthly_report at the end of each month
+    for user in User.query.all():
+        role = Role.query.filter_by(id = RolesUsers.query.filter_by(id=user.id).first().role_id).first().name
+        if role == "user" and user.active == True:
+            user_id = user.id
+            sender.add_periodic_task(
+                crontab(day_of_month='*', hour='*', minute='*',day_of_week='*'),
+                generate_report.s(user_id=user_id),  # Change the user_id as needed   
+                name=f'generate-monthly-report-{user_id}'
+            )
+            print(user.email)
+    
+    
 
 if __name__ == '__main__':
     app.app_context().push()
