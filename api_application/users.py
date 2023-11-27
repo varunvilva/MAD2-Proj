@@ -8,6 +8,7 @@ cart_fields = {
     'product_id': fields.Integer,
     'quantity': fields.Float,
 }
+
 # List all items in the cart for the given user
 class CartListResource(Resource):
     @auth_required('token', 'session')

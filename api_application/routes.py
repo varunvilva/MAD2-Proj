@@ -54,7 +54,7 @@ def user_login():
         login_user(user)
         user.last_login_time = datetime.utcnow()
         db.session.commit()
-        return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name, "message":"success"})
+        return jsonify({"token": user.get_auth_token(), "email": user.email, "role": user.roles[0].name,"id":user.id, "message":"success"})
     else:
         return jsonify({"message": "FAILURE"}), 400
 
