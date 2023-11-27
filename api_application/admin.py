@@ -38,7 +38,7 @@ class CategoryResource(Resource):
                 'no_of_products': category.no_of_products
             }, 200
     
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('admin')
     def delete(self, category_id):
         category = Category.query.get(category_id)
@@ -50,7 +50,7 @@ class CategoryResource(Resource):
         db.session.commit()
         return {'message': 'success'},200  
     
-    @auth_required('token', 'session')
+    @auth_required('token')
     @roles_accepted('admin')
     def put(self, category_id):
         parser = reqparse.RequestParser()
@@ -190,7 +190,7 @@ class ProductListResource(Resource):
         return {'message': 'success'}, 201
     
 class OrderSummary(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('admin','user','manager')
     def get(self):
         orders= Order.query.all()
@@ -205,7 +205,7 @@ class OrderSummary(Resource):
         return l, 200
 
 class OrderItemsSummary(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('admin','user','manager')
     def get(self):
         orders= OrderItem.query.all()

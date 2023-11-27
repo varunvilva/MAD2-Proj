@@ -11,7 +11,7 @@ cart_fields = {
 
 # List all items in the cart for the given user
 class CartListResource(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def get(self, user_id):
         cart_items = Cart.query.filter_by(user_id=user_id).all()
@@ -21,6 +21,7 @@ class CartListResource(Resource):
                 'id': cart_item.id,
                 'user_id': cart_item.user_id,
                 'product_id': cart_item.product_id,
+                'product_name': Product.query.filter_by(id = cart_item.product_id).first().name,
                 'quantity': cart_item.Quantity,
                 'rate_per_unit':cart_item.rate_per_unit,
                 'total_price':cart_item.price_of_qty
@@ -28,7 +29,7 @@ class CartListResource(Resource):
 
 # Add,Delete and Update a product to the cart for the given user
 class CartResource(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def post(self, user_id,product_id):
         parser = reqparse.RequestParser()
@@ -54,7 +55,7 @@ class CartResource(Resource):
 
         return {'message': f'Product added to the cart for user_id {user_id}'}, 200
 
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def put(self, user_id,product_id):
         parser = reqparse.RequestParser()
@@ -75,7 +76,7 @@ class CartResource(Resource):
 
         return {'message': 'success'}, 200
 
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def delete(self, user_id,product_id):
         parser = reqparse.RequestParser()
@@ -93,7 +94,7 @@ class CartResource(Resource):
     
 
 class PlaceOrder(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def post(self, user_id):
         cart_items = Cart.query.filter_by(user_id=user_id).all()
@@ -123,7 +124,7 @@ class PlaceOrder(Resource):
         return {"message": "success"}, 200
     
 class CancelOrder(Resource):
-    @auth_required('token', 'session')
+    @auth_required('token','session')
     @roles_accepted('user')
     def delete(self, user_id, order_id):
         order = Order.query.filter_by(id=order_id, user_id=user_id).first()

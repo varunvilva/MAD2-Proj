@@ -18,21 +18,21 @@ def landingPageUser():
     return "Hello World"
 
 
-@app.route('/protected')
-@roles_accepted('admin', 'user')
-def landingPageAdmin():
-    return render_template("user/landingPageuser.html")
+# @app.route('/protected')
+# @roles_accepted('admin', 'user')
+# def landingPageAdmin():
+#     return render_template("user/landingPageuser.html")
 
 
-@app.route('/profile')
-@auth_required('token', 'session')
-def profile():
+# @app.route('/profile')
+# @auth_required('token','session')
+# def profile():
 
-    if current_user.is_authenticated:
-        session_token = current_user.get_auth_token()
-        return f'Welcome, {current_user.username}! Your session token is: {session_token}'
-    else:
-        return 'You are not logged in.'
+#     if current_user.is_authenticated:
+#         session_token = current_user.get_auth_token()
+#         return f'Welcome, {current_user.username}! Your session token is: {session_token}'
+#     else:
+#         return 'You are not logged in.'
 
 
 @app.post('/user-login')
@@ -46,7 +46,6 @@ def user_login():
 
     if not user:
         return jsonify({"message": "User Not Found"}), 404
-    
     if not user.active:
         return jsonify({"message": "User is not active"}), 400
     
@@ -84,7 +83,7 @@ def register():
             return f"An error occurred: {str(e)}"
     
 @app.route('/user-activate/<int:user_id>', methods=['GET'])
-@auth_required('token', 'session')
+@auth_required('token','session')
 @roles_required('admin')
 def manager_allowed(user_id):
     user = User.query.get(user_id)
@@ -99,7 +98,7 @@ def manager_allowed(user_id):
         
 
 @app.route('/logout', methods=['GET', 'POST'])
-@auth_required('token', 'session')
+@auth_required('token','session')
 def logout():
     current_user.last_loggout_time = datetime.utcnow()
     db.session.commit()
@@ -108,7 +107,7 @@ def logout():
 
 
 @app.route('/download-data/<int:user_id>', methods=['GET', 'POST'])
-@auth_required('token', 'session')
+@auth_required('token','session')
 @roles_accepted('user','manager')
 def download_csv(user_id):
     task = create_csv.delay(user_id)
@@ -116,7 +115,7 @@ def download_csv(user_id):
 
 
 @app.get('/get-csv/<task_id>')
-@auth_required('token', 'session')
+@auth_required('token','session')
 @roles_accepted('user','manager')
 def get_csv(task_id):
     res = AsyncResult(task_id)
@@ -128,7 +127,7 @@ def get_csv(task_id):
         return {"message": "FAILURE"}, 404
 
 @app.route('/get-all-managers',methods=['GET'])
-@auth_required('token', 'session')
+@auth_required('token','session')
 @roles_accepted('admin')
 def get_all_managers():
     managers = User.query.filter_by(active=False).all()
@@ -142,3 +141,39 @@ def get_all_managers():
             "active":manager.active
         })
     return l, 200
+
+
+
+@app.route('/search/<string:query>',methods=['POST'])
+@auth_required('token','session')
+@roles_accepted('user','manager')
+def search(query):
+    form = query  # Assuming the form field is named 'search'
+    products = Product.query.filter(Product.name.like('%' + form + '%')).all()
+    categories = Category.query.filter(Category.name.like('%' + form + '%')).all()
+    prod = []
+    cat=[]
+    for product in products:
+        prod.append({
+            "id":product.id,
+            "category_id":product.category_id,
+            "name":product.name,
+            "manufacturer":product.manufacturer,
+            "expiry":str(product.expiry),
+            "rate_per_unit":product.rate_per_unit,
+            "available_quantity":product.available_quantity,
+            "units":product.units
+        })
+    for category in categories:
+        cat.append({
+            "id":category.id,
+            "name":category.name,
+            "no_of_products":category.no_of_products
+        })
+    print(prod)
+    print(cat)
+    return {
+        "products":prod,
+        "categories":cat
+    }, 200
+    
