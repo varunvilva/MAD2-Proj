@@ -232,7 +232,8 @@ class OrderItemofUser(Resource):
                 "id":order.id,
                 "user_id":order.user_id,
                 "placed_at":str(order.placed_at),
-                "description":order.description
+                "description":order.description,
+                "total_ammount":order.total_ammount
             })
         return l, 200
 
