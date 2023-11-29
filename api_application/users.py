@@ -12,7 +12,7 @@ cart_fields = {
 # List all items in the cart for the given user
 class CartListResource(Resource):
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def get(self, user_id):
         cart_items = Cart.query.filter_by(user_id=user_id).all()
         if not cart_items:
@@ -30,7 +30,7 @@ class CartListResource(Resource):
 # Add,Delete and Update a product to the cart for the given user
 class CartResource(Resource):
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def post(self, user_id,product_id):
         parser = reqparse.RequestParser()
         parser.add_argument('quantity', type=float, required=True, help="Quantity cannot be blank!")
@@ -56,12 +56,11 @@ class CartResource(Resource):
         return {'message': f'Product added to the cart for user_id {user_id}'}, 200
 
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def put(self, user_id,product_id):
         parser = reqparse.RequestParser()
         parser.add_argument('quantity', type=float, required=True, help="Quantity cannot be blank!")
         args = parser.parse_args()
-
         cart_item = Cart.query.filter_by(user_id=user_id, product_id=product_id).first()
 
         if cart_item is None:
@@ -77,7 +76,7 @@ class CartResource(Resource):
         return {'message': 'success'}, 200
 
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def delete(self, user_id,product_id):
         parser = reqparse.RequestParser()
         args = parser.parse_args()
@@ -95,18 +94,20 @@ class CartResource(Resource):
 
 class PlaceOrder(Resource):
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def post(self, user_id):
         cart_items = Cart.query.filter_by(user_id=user_id).all()
         if not cart_items:
             return {"message": "No items in the cart to order"}, 400
         new_order = Order(
             user_id=user_id,
-            description=request.json.get('description', None) 
+            description=request.json.get('description', None),
+            total_amount=0
         )
 
         db.session.add(new_order)
         db.session.commit()
+        total_amount = 0
         for item in cart_items:
             new_order_item = OrderItem(
                 order_id=new_order.id,
@@ -114,10 +115,13 @@ class PlaceOrder(Resource):
                 quantity=item.Quantity,
                 total_price=item.price_of_qty  # Assuming total_price is part of the JSON request
             )
+            total_amount += item.price_of_qty
             product_id = item.product_id
             product =Product.query.filter_by(id = product_id).first()
             product.available_quantity = product.available_quantity - item.Quantity
             db.session.add(new_order_item)
+        new_order = Order.query.filter_by(id=new_order.id).first()
+        new_order.total_amount = total_amount
         db.session.commit()
         Cart.query.filter_by(user_id=user_id).delete()
         db.session.commit()
@@ -125,7 +129,7 @@ class PlaceOrder(Resource):
     
 class CancelOrder(Resource):
     @auth_required('token','session')
-    @roles_accepted('user')
+    @roles_accepted('user','manager')
     def delete(self, user_id, order_id):
         order = Order.query.filter_by(id=order_id, user_id=user_id).first()
         if order is None:

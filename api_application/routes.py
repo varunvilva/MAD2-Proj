@@ -108,7 +108,7 @@ def logout():
 
 @app.route('/download-data/<int:user_id>', methods=['GET', 'POST'])
 @auth_required('token','session')
-@roles_accepted('user','manager')
+@roles_accepted('manager')
 def download_csv(user_id):
     task = create_csv.delay(user_id)
     return jsonify({"task_id": task.id}), 200
@@ -116,7 +116,7 @@ def download_csv(user_id):
 
 @app.get('/get-csv/<task_id>')
 @auth_required('token','session')
-@roles_accepted('user','manager')
+@roles_accepted('manager')
 def get_csv(task_id):
     res = AsyncResult(task_id)
     if res.ready():
@@ -170,8 +170,6 @@ def search(query):
             "name":category.name,
             "no_of_products":category.no_of_products
         })
-    print(prod)
-    print(cat)
     return {
         "products":prod,
         "categories":cat

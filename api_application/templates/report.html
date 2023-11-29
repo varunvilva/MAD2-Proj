@@ -1,6 +1,6 @@
 <!-- app/templates/report.html -->
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html> 
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -19,4 +19,81 @@
     <h2>Average Order Value:</h2>
     <img src="data:image/png;base64,{{ avg_order_chart }}" alt="Average Order Value Chart">
 </body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Activity Report - Grocerify</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            color: #333;
+        }
+
+        .header {
+            background-color: #008080; /* Teal color for the header */
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .intro {
+            background-color: #f4f4f4;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+
+        h1, h2 {
+            color: #008080; /* Teal color for subheadings */
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Grocerify</h1>
+    </div>
+
+    <div class="intro">
+        <h1>User Activity Report for {{ user.username }}</h1>
+        <p>This report provides an overview of user activity, product preferences, and average order value.</p>
+    </div>
+
+    <div style="background-color: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin: 20px;">
+        <section>
+            <h2>User Activity:</h2>
+            <img src="data:image/png;base64,{{ activity_chart }}" alt="User Activity Chart">
+        </section>
+
+        <section>
+            <h2>Product Preferences:</h2>
+            <img src="data:image/png;base64,{{ preferences_chart }}" alt="Product Preferences Chart">
+        </section>
+
+        <section>
+            <h2>Average Order Value:</h2>
+            <img src="data:image/png;base64,{{ avg_order_chart }}" alt="Average Order Value Chart">
+        </section>
+    </div>
+</body>
 </html>
+
+

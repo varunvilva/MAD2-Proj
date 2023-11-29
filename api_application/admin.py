@@ -39,7 +39,7 @@ class CategoryResource(Resource):
             }, 200
     
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manager')
     def delete(self, category_id):
         category = Category.query.get(category_id)
         if category == None:
@@ -51,7 +51,7 @@ class CategoryResource(Resource):
         return {'message': 'success'},200  
     
     @auth_required('token')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manager')
     def put(self, category_id):
         parser = reqparse.RequestParser()
         parser.add_argument('name', type=str, required=True, help="Name cannot be blank!")
@@ -87,7 +87,7 @@ class ProductResource(Resource):
             }, 200  
     
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manager')
     def delete(self, product_id):
         product = Product.query.get(product_id)
         if(product==None):
@@ -98,7 +98,7 @@ class ProductResource(Resource):
         return {'message': 'success'},200
     
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manger')
     def put(self, product_id):
         product = Product.query.get(product_id)
         prev_cat_id = product.category_id
@@ -138,7 +138,7 @@ class CategoryListResource(Resource):
     
     #create a new category
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manager')
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('name', type=str, required=True, help="Name cannot be blank!")
@@ -160,7 +160,7 @@ class ProductListResource(Resource):
         return Product.query.all()
 
     @auth_required('token','session')
-    @roles_accepted('admin')
+    @roles_accepted('admin','manager')
     def post(self):
         
         parser = reqparse.RequestParser()
@@ -200,7 +200,8 @@ class OrderSummary(Resource):
                 "id":order.id,
                 "user_id":order.user_id,
                 "placed_at":str(order.placed_at),
-                "description":order.description
+                "description":order.description,
+                "total_ammount":order.total_ammount
             })
         return l, 200
 
@@ -219,6 +220,21 @@ class OrderItemsSummary(Resource):
                 "total_price":order.total_price
             })
         return l, 200
+    
+class OrderItemofUser(Resource):
+    @auth_required('token','session')
+    @roles_accepted('user', 'manager')
+    def get(self, user_id):
+        orders= Order.query.filter_by(user_id=user_id).first()
+        l = []
+        for order in orders:
+            l.append({
+                "id":order.id,
+                "user_id":order.user_id,
+                "placed_at":str(order.placed_at),
+                "description":order.description
+            })
+        return l, 200
 
 api.add_resource(OrderSummary,'/get-orders') 
 api.add_resource(OrderItemsSummary,'/get-order-items') 
@@ -226,4 +242,5 @@ api.add_resource(CategoryResource, '/categories/<int:category_id>')
 api.add_resource(CategoryListResource, '/categories')
 api.add_resource(ProductResource, '/products/<int:product_id>')
 api.add_resource(ProductListResource, '/products')
+api.add_resource(OrderItemofUser, '/users/<int:user_id>/orders')
 

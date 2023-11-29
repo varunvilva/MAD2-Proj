@@ -69,5 +69,6 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     placed_at = db.Column(db.DateTime, default=datetime.utcnow())
     description = db.Column(db.String(100))
+    total_amount = db.Column(db.Float, nullable=False)
     items = db.relationship('OrderItem', backref='order', lazy='dynamic')
     
